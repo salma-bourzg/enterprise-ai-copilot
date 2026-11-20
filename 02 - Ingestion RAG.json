@@ -1,0 +1,131 @@
+{
+  "name": "02 - Ingestion RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Ajouter un document",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "document",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        48,
+        -48
+      ],
+      "id": "73438e0a-37da-4a01-8e72-a3f5d717607c",
+      "name": "On form submission",
+      "webhookId": "93b1ffc2-3b46-45e8-9ae2-77f518f4c967"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": "documents",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.4,
+      "position": [
+        272,
+        -48
+      ],
+      "id": "918cad20-e8bf-4291-a2f4-f5005a58ac55",
+      "name": "Postgres PGVector Store",
+      "credentials": {
+        "postgres": {
+          "id": "IKsG528dD8ZpVdGn",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        96,
+        96
+      ],
+      "id": "ef5e4fab-d165-490f-b6b4-fc55fc6ced3e",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "BpGuezjdh9dxqFta",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "loader": "textLoader",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        304
+      ],
+      "id": "3b3ff50b-d4e7-4837-b489-d6cc270b270a",
+      "name": "Default Data Loader"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3f03e63b-5004-476b-b20c-0805d7d9e0d2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "291b77b1185698ea0c9296ab29a3871602e4b7c990420fa1a903f4f6b083d832"
+  },
+  "nodeGroups": [],
+  "id": "foWTABl5hVVl4oJI",
+  "tags": []
+}

@@ -1,0 +1,697 @@
+{
+  "name": "04 - Gmail avec validation",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Email reçu d'un client.\nExpéditeur : {{ $('Gmail Trigger').item.json.From }}\nObjet : {{ $('Gmail Trigger').item.json.Subject }}\nMessage : {{ $('Gmail Trigger').item.json.snippet }}\n\nRédige une réponse à envoyer à ce client.",
+        "options": {
+          "systemMessage": "Tu es l'assistant du support client. Utilise toujours l'outil de recherche pour trouver la réponse dans la base de connaissances. Réponds en français, de façon courte et polie. Si l'information n'est pas dans la base, dis que tu transmets la demande à un conseiller. Écris uniquement le texte de l'email de réponse, commençant par \"Bonjour\" et terminant par \"Cordialement, le support client\"."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        272,
+        32
+      ],
+      "id": "1ff38793-c298-4100-94a4-c7ec78ffe933",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        224
+      ],
+      "id": "bc17636e-a704-496e-94ea-e71c3bd0f94c",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "BpGuezjdh9dxqFta",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Recherche dans la base de connaissances du support client (remboursements, mots de passe, horaires, résiliation).",
+        "tableName": "documents",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        432
+      ],
+      "id": "50b8f9cd-b6b0-4bd0-a140-5b0f98158e76",
+      "name": "Postgres PGVector Store",
+      "credentials": {
+        "postgres": {
+          "id": "IKsG528dD8ZpVdGn",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        512,
+        544
+      ],
+      "id": "ec182791-ce1f-4e19-b0c1-59da07679c02",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "BpGuezjdh9dxqFta",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "-category:promotions -category:social -category:updates -from:noreply",
+          "readStatus": "unread"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "95ce02ff-e9d7-4536-a119-165467c898ba",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P92V6hGMUwAOzVdv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "validateur@example.com",
+        "subject": "Validation réponse support",
+        "message": "=Email du client : {{ $('Gmail Trigger').item.json.From }}\nQuestion : {{ $('Gmail Trigger').item.json.snippet }}\n\nRéponse proposée :\n{{ $json.output }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "b2e79495-1eb0-4f60-9fec-e58946ba9ea9",
+      "name": "Send message and wait for response",
+      "webhookId": "d6cf839f-cd4f-43cf-91f1-e6cf4fc8a5af",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P92V6hGMUwAOzVdv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "f64fbac0-bffc-4a31-904e-3552c68edd0c",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        816,
+        0
+      ],
+      "id": "6436290d-5aee-40ce-a7f7-1d467780f43d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "emailType": "text",
+        "message": "={{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        -64
+      ],
+      "id": "19087e6c-0452-41dc-a812-f7c4174b3bc2",
+      "name": "Reply to a message",
+      "webhookId": "fbdd9f64-7c46-4548-98e1-8d1cf7e76005",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P92V6hGMUwAOzVdv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tickets",
+          "mode": "list",
+          "cachedResultName": "tickets"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nom": "={{ $('Gmail Trigger').item.json.From.split('<')[0].trim() }}",
+            "email": "= {{ $('Gmail Trigger').item.json.From.match(/<(.+)>/)?.[1] ?? $('Gmail Trigger').item.json.From }}",
+            "message": "= {{ $('Gmail Trigger').item.json.snippet }}",
+            "statut": "a_traiter_conseiller",
+            "categorie": "={{ $('Basic LLM Chain').item.json.output.categorie }}",
+            "priorite": "={{ $('Basic LLM Chain').item.json.output.priorite }}",
+            "resume": "={{ $('Basic LLM Chain').item.json.output.resume }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nom",
+              "displayName": "nom",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categorie",
+              "displayName": "categorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priorite",
+              "displayName": "priorite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resume",
+              "displayName": "resume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "statut",
+              "displayName": "statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cree_le",
+              "displayName": "cree_le",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "340b8aa1-28fd-4fd2-8d6a-b92a81197909",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "IKsG528dD8ZpVdGn",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "emailType": "text",
+        "message": "Bonjour,  Nous avons bien reçu votre demande. Un conseiller va l'étudier et vous répondra rapidement.  Cordialement, le support client",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1264,
+        96
+      ],
+      "id": "1953b9aa-0eba-4397-8761-2a972765fc98",
+      "name": "Reply to a message1",
+      "webhookId": "7fd27f21-062c-4d4c-88bd-3e3e2fbfce71",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P92V6hGMUwAOzVdv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tickets",
+          "mode": "list",
+          "cachedResultName": "tickets"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nom": "={{ $('Gmail Trigger').item.json.From.split('<')[0].trim() }}",
+            "email": "={{ $('Gmail Trigger').item.json.From.match(/<(.+)>/)?.[1] ?? $('Gmail Trigger').item.json.From }}",
+            "message": "={{ $('Gmail Trigger').item.json.snippet }}",
+            "reponse": "={{ $('AI Agent').item.json.output }}",
+            "statut": "repondu",
+            "categorie": "={{ $('Basic LLM Chain').item.json.output.categorie }}",
+            "priorite": "={{ $('Basic LLM Chain').item.json.output.priorite }}",
+            "resume": "={{ $('Basic LLM Chain').item.json.output.resume }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nom",
+              "displayName": "nom",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categorie",
+              "displayName": "categorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priorite",
+              "displayName": "priorite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resume",
+              "displayName": "resume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "statut",
+              "displayName": "statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cree_le",
+              "displayName": "cree_le",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reponse",
+              "displayName": "reponse",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        1264,
+        -64
+      ],
+      "id": "04cc6126-5544-4b95-89fe-c0cd437ab3ca",
+      "name": "Insert rows in a table1",
+      "credentials": {
+        "postgres": {
+          "id": "IKsG528dD8ZpVdGn",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un assistant de support client. Classe cette demande.\nCatégories possibles : authentification, facturation, technique, commercial, autre.\nPriorité : basse, moyenne, haute.\nRéponds uniquement avec la catégorie, la priorité et un résumé court en français.\n\nExpéditeur : {{ $json.From }}\nObjet : {{ $json.Subject }}\nMessage : {{ $json.snippet }}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -272,
+        176
+      ],
+      "id": "406247c3-d626-4515-bc05-f0f6d18e6bed",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"categorie\": \"authentification\",\n  \"priorite\": \"haute\",\n  \"resume\": \"Le client ne peut plus se connecter à son compte\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -144,
+        384
+      ],
+      "id": "1bf0e8ba-cef2-407f-8a32-c72bc6918f25",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        400
+      ],
+      "id": "11e36375-4d55-41a7-b065-942305bc0721",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "BpGuezjdh9dxqFta",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a message": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "815c101e-a5ee-4b3b-84bc-b3c318243d12",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "291b77b1185698ea0c9296ab29a3871602e4b7c990420fa1a903f4f6b083d832"
+  },
+  "nodeGroups": [],
+  "id": "4LSb6Mf7PQV82mjw",
+  "tags": []
+}

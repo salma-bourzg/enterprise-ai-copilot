@@ -1,0 +1,17 @@
+# Secrets et variables d'environnement
+.env
+.env.*
+!.env.example
+
+# Données locales des conteneurs (si montées en dossier au lieu de volumes Docker)
+n8n_data/
+pg_data/
+.n8n/
+
+# Fichiers système / éditeurs
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log

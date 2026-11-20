@@ -1,0 +1,9 @@
+Remboursement : un client facturé deux fois est remboursé sous 5 jours ouvrés après vérification.
+
+Mot de passe oublié : cliquer sur "Mot de passe oublié" sur la page de connexion. Un lien de réinitialisation est envoyé par email, valable 24 heures.
+
+Compte bloqué : après 5 tentatives échouées, le compte est bloqué 30 minutes.
+
+Horaires du support : du lundi au vendredi, de 9h à 18h.
+
+Résiliation : l'abonnement peut être résilié à tout moment depuis la page Mon compte, sans frais.

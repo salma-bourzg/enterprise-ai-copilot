@@ -1,0 +1,153 @@
+{
+  "name": "03 - Réponse RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "81ff5a0a-2da6-4c92-aeff-cb3d982a93dc",
+      "name": "When chat message received",
+      "webhookId": "a068962c-756b-45fa-bd58-61948076ab1d"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Tu es l'assistant du support client. Utilise toujours l'outil de recherche pour trouver la réponse dans la base de connaissances. Réponds en français, de façon courte et polie. Si l'information n'est pas dans la base, dis que tu transmets la demande à un conseiller."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b8aea041-48b4-4618-80a3-f8cb26d44def",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        96,
+        208
+      ],
+      "id": "f9d823ec-d40a-4c6e-802c-b35c83f4d6ad",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "BpGuezjdh9dxqFta",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Recherche dans la base de connaissances du support client (remboursements, mots de passe, horaires, résiliation).",
+        "tableName": "documents",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        432
+      ],
+      "id": "9189d1ea-7f3c-4f58-b512-461ea8f970f2",
+      "name": "Postgres PGVector Store",
+      "credentials": {
+        "postgres": {
+          "id": "IKsG528dD8ZpVdGn",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        512,
+        544
+      ],
+      "id": "50a478dd-5a22-4130-83f4-dbf9596cb4ab",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "BpGuezjdh9dxqFta",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "eaeab96f-e72b-4af8-850a-0f169795f5ba",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "291b77b1185698ea0c9296ab29a3871602e4b7c990420fa1a903f4f6b083d832"
+  },
+  "nodeGroups": [],
+  "id": "wIztNkp27Dregq3F",
+  "tags": []
+}
